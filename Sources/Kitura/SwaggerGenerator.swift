@@ -198,7 +198,7 @@ enum SwiftType: String {
     case String
 
     // Return the OpenApi (Swagger) type that maps to the Swift type.
-    func swaggerType() -> String {
+    var swaggerType: String {
         switch self {
         case .Bool:
             return "boolean"
@@ -216,7 +216,7 @@ enum SwiftType: String {
     // Return the OpenApi (Swagger) format needed for certain Swift types. Some
     // Swift types don't need a format, this is used to provide more info about
     // a type for an application that uses the generated Swagger doc.
-    func swaggerFormat() -> String? {
+    var swaggerFormat: String? {
         switch self {
         case .Float:
             return "float"
@@ -312,15 +312,15 @@ struct SwaggerDocument: Encodable {
     // Build a SwaggerParameter from a description and a parameter type.
     //
     // - Parameter name: A string name for the parameter.
-    // - Parameter parametertype: A string representation of the parameter type.
+    // - Parameter parameterType: A string representation of the parameter type.
     // - Returns: SwaggerParameter.
-    func buildParameter(name: String, parametertype: String) -> SwaggerParameter {
+    func buildParameter(name: String, parameterType: String) -> SwaggerParameter {
         if name == "id" {
             // id can only be string or integer. so force the type to string if
             // it is neither.
             var idType = "string"
-            if let ptype = SwiftType(rawValue: parametertype) {
-                idType = ptype.swaggerType()
+            if let supportedSwiftType = SwiftType(rawValue: parameterType) {
+                idType = supportedSwiftType.swaggerType
                 if idType != "integer" && idType != "string" {
                     idType = "string"
                 }
@@ -335,7 +335,7 @@ struct SwaggerDocument: Encodable {
         return SwaggerParameter(invalue: "body",
                                 name: name,
                                 required: true,
-                                schema: SingleRefSchema(ref: "#/definitions/\(parametertype)"),
+                                schema: SingleRefSchema(ref: "#/definitions/\(parameterType)"),
                                 type: nil)
     }
 
@@ -402,8 +402,8 @@ struct SwaggerDocument: Encodable {
         }
 
         if let type = SwiftType(rawValue: swiftTypeStr) {
-            property["type"] = .string(type.swaggerType())
-            if let format = type.swaggerFormat() {
+            property["type"] = .string(type.swaggerType)
+            if let format = type.swaggerFormat {
                 property["format"] = .string(format)
             }
         } else {
@@ -443,10 +443,10 @@ struct SwaggerDocument: Encodable {
             let typeName = self.getUnkeyedTypeName(typeinfo)
             if SwiftType.isBaseType(typeName) {
                 if let type = SwiftType(rawValue: typeName) {
-                    if let format = type.swaggerFormat() {
-                        property["items"] = .nativearray(NativeArraySchema(type: type.swaggerType(), format: format))
+                    if let format = type.swaggerFormat {
+                        property["items"] = .nativearray(NativeArraySchema(type: type.swaggerType, format: format))
                     } else {
-                        property["items"] = .nativearray(NativeArraySchema(type: type.swaggerType()))
+                        property["items"] = .nativearray(NativeArraySchema(type: type.swaggerType))
                     }
                 }
             } else {
@@ -558,11 +558,11 @@ struct SwaggerDocument: Encodable {
                 // handle the input parameter here: turn it into a parameters object.
                 var parameters = SwaggerParameters()
                 if let id = id {
-                    parameters.append(buildParameter(name: "id", parametertype: id))
+                    parameters.append(buildParameter(name: "id", parameterType: id))
                 }
 
                 if let paramtype = inputtype {
-                    parameters.append(buildParameter(name: "input", parametertype: paramtype))
+                    parameters.append(buildParameter(name: "input", parameterType: paramtype))
                 }
 
                 // not going to use the default response for now as this refers to
